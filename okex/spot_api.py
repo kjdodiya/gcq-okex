@@ -121,12 +121,11 @@ class SpotAPI(Client):
             params['size'] = size
         if depth:
             params['depth'] = depth
-        print(params)
-        return self._request_with_params(GET, SPOT_DEPTH + str(instrument_id) + '/book', params)
+        return await self._request_with_params(GET, SPOT_DEPTH + str(instrument_id) + '/book', params)
 
     # query ticker info
     async def get_ticker(self):
-        return self._request_without_params(GET, SPOT_TICKER)
+        return await self._request_without_params(GET, SPOT_TICKER)
 
     # query specific ticker
     async def get_specific_ticker(self, instrument_id):

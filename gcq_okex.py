@@ -51,6 +51,11 @@ class GCQOkex(object):
 		resp = await self.client.get_specific_ticker(symbol)
 		return resp
 
+
+	async def depth(self, symbol, size=200, future=False, type = None):
+		resp = await self.client.get_depth(symbol, size)
+		return resp
+
 async def okex_trade():
 	api_key = "87e34868-d3c1-4b3b-9752-62a154349569"
 	api_secret = "EE8534F26BD53DE380D51604BD67D957"
@@ -60,7 +65,9 @@ async def okex_trade():
 
 	symbol = 'ETH-USDT'
 
-	ticker_resp = await gcq_okex.ticker(symbol)
+	#ticker_resp = await gcq_okex.ticker(symbol)
+	#print (ticker_resp)
+	ticker_resp = await gcq_okex.depth(symbol)
 	print (ticker_resp)
 	# trades_resp = await okex_spot.trades(symbol)
 	# print (trades_resp)
