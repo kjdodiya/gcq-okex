@@ -78,7 +78,7 @@ class SpotAPI(Client):
             params['to'] = to
         if instrument_id:
             params['instrument_id'] = instrument_id
-        return self._request_with_params(GET, SPOT_ORDERS_LIST, params, cursor=True)
+        return await self._request_with_params(GET, SPOT_ORDERS_LIST, params, cursor=True)
 
     # query order info
     async def get_order_info(self, instrument_id='btc-usdt',order_id='',client_oid=''):
