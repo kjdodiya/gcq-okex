@@ -32,7 +32,7 @@ class SpotAPI(Client):
         params = {'type': otype, 'side': side, 'instrument_id': instrument_id, 'size': size, 'client_oid': client_oid,
                   'price': price, 'funds': funds, 'margin_trading': margin_trading,'order_type':order_type}
         print(params)
-        return self._request_with_params(POST, SPOT_ORDER, params)
+        return await self._request_with_params(POST, SPOT_ORDER, params)
 
     # take orders
     # 市价单
@@ -52,7 +52,7 @@ class SpotAPI(Client):
     # revoke order
     async def revoke_order(self, oid, instrument_id):
         params = {'instrument_id': instrument_id}
-        return self._request_with_params(POST, SPOT_REVOKE_ORDER + str(oid), params)
+        return await self._request_with_params(POST, SPOT_REVOKE_ORDER + str(oid), params)
 
     # revoke orders
 

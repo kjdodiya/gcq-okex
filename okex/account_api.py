@@ -13,8 +13,8 @@ class AccountAPI(Client):
         return self._request_without_params(GET, CURRENCIES_INFO)
 
     # get wallet info
-    def get_wallet(self):
-        return self._request_without_params(GET, WALLET_INFO)
+    async def get_wallet(self):
+        return await self._request_without_params(GET, WALLET_INFO)
 
     # get specific currency info
     def get_currency(self, symbol):

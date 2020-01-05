@@ -9,8 +9,7 @@ import okex.futures_api as future
 import okex.lever_api as lever
 import okex.spot_api as spot
 import okex.swap_api as swap
-
-
+from datetime import datetime
 
 
 
@@ -29,6 +28,7 @@ class GCQOkex(object):
 		self.KEY = api_key
 		self.SECRET = api_secret
 		self.PASSPHRASE = passphrase
+		self.account_client = account.AccountAPI(self.KEY, self.SECRET, self.PASSPHRASE, True)
 		#self.session = aiohttp.ClientSession(loop=loop)
 		self.logger = logger
 #		self.okex = Exchange.objects.get(code='OKX')
@@ -59,7 +59,27 @@ class GCQOkex(object):
 		result = await self.client.get_orders_list('all', symbol, limit=100)
 		return result
 
+	async def balances(self, account='FT'):
+		if account == 'WA':
+			result = await self.account_client.get_wallet()
+		return result
 
+	async def place_order(self, amount, price, ord_type, symbol='btcusd', future=None):
+
+		if future is not None:
+			print ("Future Not supported yet")
+		else:
+			#                          take_order(self, otype, side, instrument_id, size, margin_trading=1, client_oid='', price='', funds='',order_type = '')
+			coid = "kdwokexv3%d" % (datetime.utcnow().timestamp()*1000)
+			# print (coid)
+			result = await self.client.take_order('limit', 'sell', 'ETH-USDT', amount, price=price, client_oid=coid, order_type='0')
+			print (result)			
+			return result
+
+	async def cancel_order(self, oid, symbol):
+		result = await self.client.revoke_order(oid, symbol)
+		print (result)
+		return result
 
 async def okex_trade():
 	api_key = "87e34868-d3c1-4b3b-9752-62a154349569"
@@ -74,8 +94,16 @@ async def okex_trade():
 	#print (ticker_resp)
 	# ticker_resp = await gcq_okex.depth(symbol)
 	# print (ticker_resp)
+	# order_hs = await gcq_okex.get_order_history(symbol)
+	# print (order_hs[0][0])
+	# wallet_info = await gcq_okex.balances(account='WA')
+	# print (wallet_info)
+	# new_order = await gcq_okex.place_order(0.001,'136.01','sell')
+	# print (new_order)
 	order_hs = await gcq_okex.get_order_history(symbol)
-	print (order_hs)
+	print (order_hs[0][0])
+	# cancel_order = await gcq_okex.cancel_order('4158334007773184', symbol)
+	# print (cancel_order)
 	# trades_resp = await okex_spot.trades(symbol)
 	# print (trades_resp)
 	# currencies_resp = await okex_spot.get_currencies()
