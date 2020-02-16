@@ -22,7 +22,7 @@ class OkexClientError(Exception):
 	pass
 
 
-class GCQOkex(object):
+class Okex(object):
 	def __init__(self, instru_type, api_key, api_secret, passphrase, loop=None, logger = None):
 		self.instru_type = instru_type		
 		self.KEY = api_key
@@ -177,7 +177,7 @@ async def okex_trade():
 	api_secret = "EE8534F26BD53DE380D51604BD67D957"
 	passphrase = "kamalftw"
 	instru_type = 'spot'
-	gcq_okex = GCQOkex(instru_type, api_key, api_secret, passphrase)
+	gcq_okex = Okex(instru_type, api_key, api_secret, passphrase)
 	#gcq_okex_future = GCQOkex('future', api_key, api_secret, passphrase)
 	symbol = 'ETH-USDT'
 
