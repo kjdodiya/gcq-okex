@@ -169,8 +169,44 @@ class Okex(object):
 
 
 	def parse_response(self, response, order):
-		pass
+		"""
+		{'client_oid': 'kdwokexv31581881593466', 'created_at': '2020-02-16T19:33:23.945Z', 'filled_notional': '0', 
+		'filled_size': '0', 'funds': '', 'instrument_id': 'ETH-USDT', 'notional': '', 'order_id': '4400454299490304',
+		'order_type': '0', 'price': '254', 'price_avg': '0', 'product_id': 'ETH-USDT', 'side': 'sell', 
+		'size': '0.001', 'state': '0', 'status': 'open', 'timestamp': '2020-02-16T19:33:23.945Z', 'type': 'limit'}
 
+		{'client_oid': 'kdwokexv31581880997065', 'created_at': '2020-02-16T19:23:27.000Z', 'filled_notional': '0.252',
+		 'filled_size': '0.001', 'funds': '', 'instrument_id': 'ETH-USDT', 'notional': '', 'order_id': '4400415226468352', 
+		 'order_type': '0', 'price': '252', 'price_avg': '252', 'product_id': 'ETH-USDT', 'side': 'sell', 'size': '0.001', 
+		 'state': '2', 'status': 'filled', 'timestamp': '2020-02-16T19:23:27.000Z', 'type': 'limit'}
+		"""
+		try:
+			if response['orders']:
+				order.risk += decimal.Decimal(response['filled_size']) - order.filled_size
+				if order.risk > 0:
+					order.status = 'PF'
+					avg_price = order.filled_price = decimal.Decimal(str(response['price_avg']))
+					order.risk_price = (avg_price * decimal.Decimal(response['filled_size'])
+										- order.filled_price * order.filled_size) / order.risk
+					order.filled_size = decimal.Decimal(response['filled_size'])
+					order.filled_price = avg_price
+				if order.filled_size == order.asked_size:
+					order.filled = True
+					order.status = 'FI'
+				if response['status'] == 'cancelled':
+					order.cancelled = True
+					if order.filled_size == 0:
+						order.status = 'CL'
+					else:
+						order.status = 'PC'
+				if 'fee' in response:
+					order.fee = response['fee']
+					if abs(order.fee / (order.listing.taker_fee / 10000 * order.filled_size) - 1) > abs(order.fee / (order.listing.maker_fee / 10000 * order.filled_size) - 1):
+						order.maker = True
+		except Exception as e:
+			self.logger.error("Okex Order Failed : %s" % e)
+			order.in_error = True
+		return order
 	def roll_contract(self, future):
 		d1 = future.expiry
 		d2 = date.today()
