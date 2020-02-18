@@ -14,12 +14,12 @@ from basis.models import FUTURE_TYPES, FuturePosition
 from django.db.models import Q
 from basis.models import Asset, Exchange, CurrentBalance
 
-import okexv3.account_api as account
-import okexv3.ett_api as ett
-import okexv3.futures_api as future
-import okexv3.lever_api as lever
-import okexv3.spot_api as spot
-import okexv3.swap_api as swap
+import OrderManager.exchanges.okexv3.account_api as account
+import OrderManager.exchanges.okexv3.ett_api as ett
+import OrderManager.exchanges.okexv3.futures_api as future
+import OrderManager.exchanges.okexv3.lever_api as lever
+import OrderManager.exchanges.okexv3.spot_api as spot
+import OrderManager.exchanges.okexv3.swap_api as swap
 
 
 
@@ -33,7 +33,7 @@ class OkexClientError(Exception):
 
 
 class Okex(object):
-	def __init__(self, api_key, api_secret, loop=None, logger = None, passphrase= None,instru_type='spot'):		
+	def __init__(self, api_key, api_secret, loop=None, logger = None, passphrase= None,instru_type='spot'):
 		self.instru_type = instru_type		
 		self.KEY = api_key
 		self.SECRET = api_secret
