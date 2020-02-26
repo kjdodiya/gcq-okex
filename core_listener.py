@@ -149,13 +149,15 @@ class Market(object):
                 output = []
                 if msg['call'] == 'get_quote':
                     if msg['listing_id'] not in self.datafeeds:
+                        print('listing_id not in self.datafeeds')
                         answer = [Quote(error=-1)]
                     else:
                         if not self.datafeeds[msg['listing_id']].is_alive():
-                            self.logger.info(
-                                "Dead datafeed : %s" % self.datafeeds[
-                                    msg['listing_id']].listing.code)
-                            answer = [Quote(error=-1)]
+                           print('self.startup_completed {}'.format(
+                               self.datafeeds[msg['listing_id']].is_alive()))
+                           self.logger.info("Dead datafeed : {}".format(
+                               self.datafeeds[msg['listing_id']].listing.code))
+                           answer = [Quote(error=-1)]
                         else:
                             answer = [self.datafeeds[
                                           msg['listing_id']].get_last_quote()]

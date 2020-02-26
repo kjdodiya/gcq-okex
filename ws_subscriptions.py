@@ -2,42 +2,52 @@ import asyncio
 import json
 import websockets
 from OrderManager.exchanges.okex3 import Okex
-
+from Listener.abstraction.tools import decompress_okex_message
 from OrderManager.exchanges.cex import CEX
 
 
 async def subscribe_OKX(feed, websocket):
     try:
         if feed.listing.asset.type == 'FT':
-            future_type = Okex.roll_contract(None, feed.listing.asset.future)
-            request = "{'event':'addChannel','channel':'ok_sub_futureusd_%s_depth_%s_%s'}" % (feed.listing.symbol[:3], future_type, feed.listing.exchange.order_book_depth)
-            await websocket.send(request)
-            msg = await asyncio.wait_for(websocket.recv(), timeout=20)  # ack message
-            # second request for the trade data
-            request = "{'event':'addChannel','channel':'ok_sub_futureusd_%s_trade_%s'}" % (feed.listing.symbol[:3], future_type)
-            await websocket.send(request)
-            msg = await asyncio.wait_for(websocket.recv(), timeout=20)  # ack message
+            # we request depth and trades
+            request_list =["futures/depth5:{symbol}".format(symbol=feed.listing.symbol),
+                           "futures/trade:{symbol}".format(symbol=feed.listing.symbol)]
+            for string_request in request_list:
+                request = {"op": "subscribe",
+                           "args":string_request}
+                request = json.dumps(request)
+                # print('okx req {}'.format(request))
+                await websocket.send(request)
+                msg = await asyncio.wait_for(websocket.recv(), timeout=30)  # ack message
+                # print('okx resp {}'.format(decompress_okex_message(msg)))
         elif feed.listing.asset.type == 'CN':
-            # we request depth and trades as one
-            request = {"op": 1,
-                       "args":
-                       ["spot/depth5:{symbol}".format(symbol=feed.listing.symbol),
-                        "spot/trades:{symbol}".format(symbol=feed.listing.symbol)]}
-            request = json.dumps(request)
-            print('okx req {}'.format(request))
-            # request = "{'event':'addChannel','channel':'ok_sub_spot_%s_depth_%s'}" % (feed.listing.symbol, feed.listing.exchange.order_book_depth)
-            await websocket.send(request)
-            msg = await asyncio.wait_for(websocket.recv(), timeout=20)  # ack message
-            print(msg)
-           
-           #  # second request for the trade data
-           #  request = "{'event':'addChannel','channel':'ok_sub_spot_%s_deals'}" % (feed.listing.symbol)
-           #  await websocket.send(request)
-           #  msg = await asyncio.wait_for(websocket.recv(), timeout=20)  # ack message
+            # we request depth and trades 
+            request_list =["spot/depth5:{symbol}".format(symbol=feed.listing.symbol),
+                           "spot/trade:{symbol}".format(symbol=feed.listing.symbol)]
+            for string_request in request_list:
+                request = {"op": "subscribe",
+                           "args":string_request}
+                request = json.dumps(request)
+                # print('okx req {}'.format(request))
+                await websocket.send(request)
+                msg = await asyncio.wait_for(websocket.recv(), timeout=30)  # ack message
+                print('okx resp {}'.format(decompress_okex_message(msg)))
+        elif feed.listing.asset.type == 'SW':
+            # we request depth and trades 
+            request_list =["swap/depth5:{symbol}".format(symbol=feed.listing.symbol),
+                           "swap/trade:{symbol}".format(symbol=feed.listing.symbol)]
+            for string_request in request_list:
+                request = {"op": "subscribe",
+                           "args":string_request}
+                request = json.dumps(request)
+                # print('okx req {}'.format(request))
+                await websocket.send(request)
+                msg = await asyncio.wait_for(websocket.recv(), timeout=30)  # ack message
+                # print('okx resp {}'.format(decompress_okex_message(msg)))
     except Exception as e:
-            print(e)
+        print('subscribe OKEX {}'.format(e))
     finally:
-            return websocket
+        return websocket
 
 
 async def subscribe_CEX(feed, websocket):
