@@ -4,14 +4,12 @@ import json
 import websockets
 import logging
 import django
-
-from OrderManager.exchanges.okex import Okex
-
-# A WebSocket connection goes through the following four states, in order:
-CONNECTING, OPEN, CLOSING, CLOSED = range(4)
-
 from OrderManager.exchanges.bitmex import BitMEX
 from basis.models import FuturePosition, Order, Listing
+
+from OrderManager.exchanges.okex import Okex
+# A WebSocket connection goes through the following four states, in order:
+CONNECTING, OPEN, CLOSING, CLOSED = range(4)
 
 
 class WSManager:

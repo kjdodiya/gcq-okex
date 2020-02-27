@@ -3,10 +3,8 @@ import datetime
 import platform
 from decimal import Decimal
 import django
-
 import zmq
 import zmq.asyncio
-
 from basis.models import Asset, Listing, Exchange
 from basis.tools.access import Access
 from basis.tools.logger import get_logger
@@ -15,10 +13,8 @@ from core.logger import set_logger
 # from exec_bridge.logger import set_logger
 from Listener.classes import BestPrice, Quote, CombinedOrderBook
 from CryptoTrader.tools.functions import round_down
-
 from Listener.abstraction.restfeed import RESTFeed
 from Listener.abstraction.wssfeed import WSSFeed
-
 # import sock config
 from Messaging.socket_config import socket_config
 
@@ -127,74 +123,88 @@ class Market(object):
                 django.db.connection.close()
                 print('core listener - closing django connection to db, should auto reconnect')
 
-
-    async def serve_requests(self, port, mode):
+    def create_async_rep_socket_poll(self, port, mode):
         """
-        Handles more complex request from the strategies)
-        :return: sends the requested quote over the ZMQ broker_socket
-        """
+        creates a REP socket with poller
 
+        :param port - int
+        :param mode - str
+
+        return socket - obj, poller - obj
+        """
         context = zmq.asyncio.Context()
         socket = context.socket(zmq.REP)
-        # we need a selecto for proxied/ux vs "normal" jabba
+        # we need a select for proxied/ux vs "normal" jabba
         if mode == "lux":
             socket.connect("tcp://localhost:" + str(port))
         else:
             socket.bind("tcp://*:" + str(port))  # bind for the server
+
+        poller = zmq.asyncio.Poller()
+        poller.register(socket, zmq.POLLIN)
+        self.logger.info('Created REP socket and POLLER')
+        return socket, poller
+
+    async def serve_requests(self, port, mode):
+        """
+        Handles more complex request from the strategies)
+        :param port - int
+        :param mode - str
+        :return: sends the requested quote over the ZMQ broker_socket
+        """
+
+        socket, poller = self.create_async_rep_socket_poll(port=port,
+                                                            mode=mode)
+
         while True:
             #  Wait for next request from client
             try:
-                # if await broker_socket.poll():
-                msg = await socket.recv_json()
-                output = []
-                if msg['call'] == 'get_quote':
-                    if msg['listing_id'] not in self.datafeeds:
-                        print('listing_id not in self.datafeeds')
-                        answer = [Quote(error=-1)]
-                    else:
-                        if not self.datafeeds[msg['listing_id']].is_alive():
-                           print('self.startup_completed {}'.format(
-                               self.datafeeds[msg['listing_id']].is_alive()))
-                           self.logger.info("Dead datafeed : {}".format(
-                               self.datafeeds[msg['listing_id']].listing.code))
-                           answer = [Quote(error=-1)]
+                socks = dict(await poller.poll())
+                if socks.get(socket) == zmq.POLLIN:
+                    msg = await socket.recv_json()
+                    output = []
+                    if msg['call'] == 'get_quote':
+                        print('INSIDE QUOTE {}'.at(msg))
+                        if msg['listing_id'] not in self.datafeeds:
+                            self.logger.info('listing_id not in self.datafeeds')
+                            answer = [Quote(error=-1)]
                         else:
-                            answer = [self.datafeeds[
-                                          msg['listing_id']].get_last_quote()]
-                elif msg['call'] in ['get_best_bid', 'get_best_offer']:
-                    func = getattr(self, msg['call'])
-                    needed_size = Decimal(msg['needed_size'])
-                    if needed_size > 0 and not msg['single_exchange']:
-                        test = 1
-                    answer = func(msg['asset_id'], msg['numeraire_id'],
-                                  needed_size, msg['excluded'],
-                                  msg['force_exchange'],
-                                  msg['single_exchange'])
-                elif msg['call'] == 'get_combined_orderbook':
-                    func = getattr(self, msg['call'])
-                    answer = func(msg['asset_id'], msg['numeraire_id'],
-                                  msg['depth'], msg['excluded'],
-                                  msg['force_exchange'],
-                                  msg['single_exchange'])
-                #  Send reply back to client
-                for item in answer:
-                    output.append(item.toJSON())
-                await socket.send_json(output)
+                            if not self.datafeeds[msg['listing_id']].is_alive():
+                               print('not is alive {} '.format(
+                                   self.datafeeds[msg['listing_id']].is_alive()))
+                               self.logger.info("Dead datafeed : {}".format(
+                                   self.datafeeds[msg['listing_id']].listing.code))
+                               answer = [Quote(error=-1)]
+                            else:
+                                answer = [self.datafeeds[
+                                              msg['listing_id']].get_last_quote()]
+                    elif msg['call'] in ['get_best_bid', 'get_best_offer']:
+                        func = getattr(self, msg['call'])
+                        needed_size = Decimal(msg['needed_size'])
+                        if needed_size > 0 and not msg['single_exchange']:
+                            test = 1
+                        answer = func(msg['asset_id'], msg['numeraire_id'],
+                                      needed_size, msg['excluded'],
+                                      msg['force_exchange'],
+                                      msg['single_exchange'])
+                    elif msg['call'] == 'get_combined_orderbook':
+                        func = getattr(self, msg['call'])
+                        answer = func(msg['asset_id'], msg['numeraire_id'],
+                                      msg['depth'], msg['excluded'],
+                                      msg['force_exchange'],
+                                      msg['single_exchange'])
+                    #  Send reply back to client
+                    for item in answer:
+                        output.append(item.toJSON())
+                    await socket.send_json(output)
 
             except zmq.error.ZMQError as e:
                 message = "ZMQ Exception %s in " \
                           "core_listener.serve_requests {}".format(e)
                 self.logger.critical(message)
-                self.trader.logger.exception(message)
                 print(message)
-                context = zmq.asyncio.Context()
-                socket = context.socket(zmq.REP)
-                # we need a selecto for proxied/ux vs "normal" jabba
-                print("core_listener - resetting ZMQ REP socket")
-                if mode == "lux":
-                    socket.connect("tcp://localhost:" + str(port))
-                else:
-                    socket.bind("tcp://*:" + str(port))  # bind for the server
+                socket, poller = self.create_async_rep_socket_poll(port=port,
+                                                                    mode=mode)
                 continue
             except Exception as e:
                 message = "ZMQ Exception %s in serve request" % e
